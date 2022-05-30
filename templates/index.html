@@ -1,0 +1,33 @@
+<!doctype html>
+
+<html>
+<head>
+
+  <title>CS 493 - JWT</title>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+
+
+  <div id="website-header">
+    <h1>WELCOME to JWT HW7 by perezjos</h1>
+  </div>
+
+  <section>
+
+    <p>
+      Welcome to JWT HW7 by perezjos. Please click the button below to sign in to your
+      Google account to see your details and create a JWT!
+    </p>
+
+    <form action="/login" method="GET"><input class="alt-button" type="submit"
+                                             value="Log in">
+    </form>
+
+  </section>
+
+</body>
+</html>
+

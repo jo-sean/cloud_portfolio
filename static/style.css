@@ -1,0 +1,36 @@
+body {
+  font-family: "helvetica", sans-serif;
+  text-align: center;
+  background-color: #30799B;
+}
+
+h1 {
+  color: #444444;
+}
+
+p {
+  color: #444444;
+}
+
+#alt {
+  font-size: 30px;
+}
+
+input {
+  background-color: #444444;
+  color: ghostwhite;
+}
+
+#jwt {
+  text-align: left;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+  font-size: 15px;
+  color: #86989B;
+  inline-size: 85%;
+  overflow-wrap: break-word;
+}
+
+
