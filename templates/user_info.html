@@ -1,0 +1,20 @@
+<!doctype html>
+
+<html>
+<head>
+  <title>Datastore and Firebase Auth Example</title>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <h1>Your OSU Profile Details and State used</h1>
+
+  <p id="alt">First name: {{ user['first'] }}</p>
+  <p id="alt">Last Name: {{ user['last'] }}</p>
+  <p id="alt">Unique ID: {{ user['sub'] }}</p>
+  <p id="alt">JWT: </p>
+  <p id="jwt">{{ user['jwt'] }}</p>
+
+</body>
+</html>

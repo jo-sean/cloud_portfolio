@@ -1,7 +1,7 @@
 body {
   font-family: "helvetica", sans-serif;
   text-align: center;
-  background-color: #30799B;
+  background-color: cadetblue;
 }
 
 h1 {
@@ -28,7 +28,7 @@ input {
   margin-right: auto;
   width: 50%;
   font-size: 15px;
-  color: #86989B;
+  color: gray();
   inline-size: 85%;
   overflow-wrap: break-word;
 }

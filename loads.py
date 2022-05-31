@@ -1,7 +1,8 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, make_response
 from google.cloud import datastore
 import json
-# from json2html import *
+from google.oauth2 import id_token
+from google.auth.transport import requests
 import constants
 
 client = datastore.Client()
@@ -30,8 +31,9 @@ def loads_get_post():
 
     elif request.method == 'GET':
         # Get query of loads and set the limit and offset for the query
+
         query = client.query(kind=constants.loads)
-        q_limit = int(request.args.get('limit', '3'))
+        q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
 
         # Get result of query and make into a list
@@ -39,16 +41,19 @@ def loads_get_post():
         pages = load_iterator.pages
         results = list(next(pages))
 
-        # Create a "next" url page using 
+        # Create a "next" url page using
+
         if load_iterator.next_page_token:
             next_offset = q_offset + q_limit
             next_url = request.base_url + "?limit=" + str(q_limit) + "&offset=" + str(next_offset)
         else:
             next_url = None
 
-        # Adds id key and value to each json slip; add next url 
+        # Adds id key and value to each json slip; add next url
+
         for load in results:
             load["id"] = load.key.id
+
         output = {"loads": results}
 
         if next_url:
@@ -60,7 +65,7 @@ def loads_get_post():
         return 'Method not recognized'
 
 
-@bp.route('/<lid>', methods=['PUT', 'DELETE', 'GET'])
+@bp.route('/<lid>', methods=['PUT', 'PATCH', 'DELETE', 'GET'])
 def loads_get_put_delete(lid):
     if request.method == 'PUT':
         content = request.get_json()
@@ -94,7 +99,121 @@ def loads_get_put_delete(lid):
 
         return '', 204
 
+    elif request.method == 'PATCH':
+
+        if not request.is_json:
+            # Checks if sent data is json, if not return 415
+            err = {"Error": "The request header 'content_type' is not application/json "
+                            "and/or the sent request body does not contain json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 415
+            return res
+
+        elif 'application/json' not in request.accept_mimetypes:
+            # Checks if client accepts json, if not return 406
+            err = {"Error": "The request header ‘Accept' is not application/json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 406
+            return res
+
+        # Checks if sent data is json, if not return 415
+        try:
+            content = request.get_json()
+        except:
+            # Checks if sent data is json, if not return 415
+            err = {"Error": "The request header 'content_type' is not application/json "
+                            "and/or the sent request body does not contain json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 415
+            return res
+
+        boat_key = client.key(constants.boats, int(bid))
+        boat = client.get(key=boat_key)
+
+        # Checks if boat with boat_id exists
+        if not boat:
+            err = {"Error": "No boat with this boat_id exists"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 404
+            return res
+
+        # If any or all of the 3 attributes are provided, they are updated.
+        if "name" in content and content["name"]:
+            # Check value of contents to make sure they are not null or have valid characters.
+            if set(content["name"]).difference(ascii_letters + whitespace):
+                err = {"Error": "The request object has at least one invalid value assigned to an attribute"}
+                res = make_response(err)
+                res.headers.set('Content-Type', 'application/json')
+                res.status_code = 400
+                return res
+
+            # Name of boat must be unique
+            query = client.query(kind=constants.boats)
+            boat_list = list(query.fetch())
+
+            # Search all boat objects and compare the names to make sure they are unique
+            for curr_boat in boat_list:
+                if curr_boat["name"] == content["name"]:
+                    err = {"Error": "There is already a boat with that name"}
+                    res = make_response(err)
+                    res.headers.set('Content-Type', 'application/json')
+                    res.status_code = 403
+                    return res
+
+            # Boat name is unique and updated
+            boat.update({"name": content["name"]})
+
+        if "type" in content and content["type"]:
+            # Check value of contents to make sure they are not null or have valid characters.
+            if set(content["type"]).difference(ascii_letters + whitespace):
+                err = {"Error": "The request object has at least one invalid value assigned to an attribute"}
+                res = make_response(err)
+                res.headers.set('Content-Type', 'application/json')
+                res.status_code = 400
+                return res
+
+            boat.update({"type": content["type"]})
+
+        if "length" in content and content["length"]:
+            # Check value of contents to make sure they are not null or have valid characters.
+            if not isinstance(content["length"], int):
+                err = {"Error": "The request object has at least one invalid value assigned to an attribute"}
+                res = make_response(err)
+                res.headers.set('Content-Type', 'application/json')
+                res.status_code = 400
+                return res
+
+            boat.update({"length": content["length"]})
+
+        client.put(boat)
+
+        res = make_response()
+        res.status_code = 200
+        return res
+
     elif request.method == 'GET':
+
+        if not request.is_json:
+            # Checks if sent data is json, if not return 415
+            err = err = {"Error": "The request header 'content_type' is not application/json "
+                                  "and/or the sent request body does not contain json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 415
+            return res
+
+        elif 'application/json' not in request.accept_mimetypes:
+            # Checks if client accepts json, if not return 406
+            err = {"Error": "The request header ‘Accept' is not application/json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 406
+            return res
+
         load_key = client.key(constants.loads, int(lid))
         load = client.get(key=load_key)
 

@@ -3,7 +3,7 @@ import boats
 import loads
 import login
 import oauth
-import owners
+import users
 import slips
 
 app = Flask(__name__)
@@ -12,7 +12,7 @@ app.register_blueprint(loads.bp)
 app.register_blueprint(slips.bp)
 app.register_blueprint(login.bp)
 app.register_blueprint(oauth.bp)
-app.register_blueprint(owners.bp)
+app.register_blueprint(users.bp)
 
 
 @app.route('/')
