@@ -56,7 +56,7 @@ def token_user_details():
                 state_key = client.key(constants.states, int(curr_state.key.id))
                 client.delete(state_key)
 
-                # Name of boat must be unique
+                # Name of user must be unique
                 query = client.query(kind=constants.users)
                 user_list = list(query.fetch())
 
