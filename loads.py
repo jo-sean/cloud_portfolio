@@ -42,7 +42,14 @@ def loads_get_post():
             res.status_code = 415
             return res
 
-        content = request.get_json()
+        # Check contents of the json file to make sure keys have values, and it is not empty.
+        # Only supported attributes will be used. Any additional ones will be ignored.
+        if not content or "item" not in content or "volume" not in content or "creation_date" not in content:
+            err = {"Error": "The request object is missing at least one of the required attributes"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 400
+            return res
 
         # Check value of contents to make sure they are not null or have valid characters.
         if set(content["item"]).difference(ascii_letters + digits + whitespace) \
@@ -53,6 +60,7 @@ def loads_get_post():
             res.status_code = 400
             return res
 
+        # Source: https://www.programiz.com/python-programming/datetime/strftime
         # Check date format
         date_format = "%m/%d/%Y"
         try:
@@ -89,7 +97,7 @@ def loads_get_post():
 
         # Get query of loads and set the limit and offset for the query
         query = client.query(kind=constants.loads)
-        total_loads = list(query.fetch())
+        total_loads = list(query.fetch(query.keys_only()))
         q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
 
@@ -168,9 +176,9 @@ def loads_get_put_delete(lid):
         load_key = client.key(constants.loads, int(lid))
         load = client.get(key=load_key)
 
-        # Checks if boat with boat_id exists
+        # Checks if load with load_id exists
         if not load:
-            err = {"Error": "No boat with this load_id exists"}
+            err = {"Error": "No load with this load_id exists"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
             res.status_code = 404
@@ -205,12 +213,14 @@ def loads_get_put_delete(lid):
             res.status_code = 400
             return res
 
+        # Updates the load
         load.update({"volume": content["volume"], "item": content["item"],
                      "creation_date": content["creation_date"]})
         client.put(load)
 
-        res = make_response()
-        res.status_code = 200
+        res = make_response(json.dumps(load))
+        res.mimetype = 'application/json'
+        res.status_code = 201
         return res
 
     elif request.method == 'DELETE':
@@ -279,7 +289,7 @@ def loads_get_put_delete(lid):
         load_key = client.key(constants.loads, int(lid))
         load = client.get(key=load_key)
 
-        # Checks if boat with boat_id exists
+        # Checks if load with load_id exists
         if not load:
             err = {"Error": "No load with this load_id exists"}
             res = make_response(err)
@@ -336,8 +346,9 @@ def loads_get_put_delete(lid):
 
         client.put(load)
 
-        res = make_response()
-        res.status_code = 200
+        res = make_response(json.dumps(load))
+        res.mimetype = 'application/json'
+        res.status_code = 201
         return res
 
     elif request.method == 'GET':
@@ -369,7 +380,7 @@ def loads_get_put_delete(lid):
     else:
         # Status code 405
         res = make_response()
-        res.headers.set('Allow', 'GET, POST')
+        res.headers.set('Allow', 'PUT, PATCH, DELETE, GET')
         res.headers.set('Content-Type', 'text/html')
         res.status_code = 405
         return res

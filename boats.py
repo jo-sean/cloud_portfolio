@@ -133,7 +133,7 @@ def boats_get_post():
         # Get query of boats by owner and set the limit and offset for the query
         query = client.query(kind=constants.boats)
         query.add_filter("owner", "=", sub)
-        total_boats = list(query.fetch())
+        total_boats = list(query.fetch(query.keys_only()))
         q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
 
@@ -228,7 +228,7 @@ def boats_get_put_delete(bid):
             err = {"Error": "The boat is owned by another user"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
-            res.status_code = 403
+            res.status_code = 401
             return res
 
         # If any or all of the 3 attributes are provided, they are updated.
@@ -253,6 +253,15 @@ def boats_get_put_delete(bid):
                     res.headers.set('Content-Type', 'application/json')
                     res.status_code = 403
                     return res
+
+            # Checks if load is on a boat, updates all load names
+            if boat["loads"]:
+                for load_item in boat["loads"]:
+                    load_key = client.key(constants.loads, int(load_item["id"]))
+                    load = client.get(key=load_key)
+                    load["carrier"]["name"] = content["name"]
+                    load.update(load)
+                    client.put(load)
 
             # Boat name is unique and updated
             boat.update({"name": content["name"]})
@@ -281,8 +290,9 @@ def boats_get_put_delete(bid):
 
         client.put(boat)
 
-        res = make_response()
-        res.status_code = 200
+        res = make_response(json.dumps(boat))
+        res.mimetype = 'application/json'
+        res.status_code = 201
         return res
 
     elif request.method == 'PUT':
@@ -330,7 +340,7 @@ def boats_get_put_delete(bid):
             err = {"Error": "The boat is owned by another user"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
-            res.status_code = 403
+            res.status_code = 401
             return res
 
         # Check contents of the json file to make sure keys have values, and it is not empty.
@@ -365,12 +375,23 @@ def boats_get_put_delete(bid):
                 res.status_code = 403
                 return res
 
+        # Checks if load is on the boat, updates all load names
+        if boat["loads"]:
+            for load_item in boat["loads"]:
+                load_key = client.key(constants.loads, int(load_item["id"]))
+                load = client.get(key=load_key)
+                print(load)
+                load["carrier"]["name"] = content["name"]
+                load.update(load)
+                client.put(load)
+
         # Edits all the attributes, except the id
         boat.update({"name": content["name"], "type": content["type"], "length": content["length"]})
         client.put(boat)
 
-        res = make_response()
-        res.status_code = 200
+        res = make_response(json.dumps(boat))
+        res.mimetype = 'application/json'
+        res.status_code = 201
         return res
 
     elif request.method == 'DELETE':
@@ -389,7 +410,7 @@ def boats_get_put_delete(bid):
             err = {"Error": "The boat is owned by another user"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
-            res.status_code = 403
+            res.status_code = 401
             return res
 
         # Check to see if load(s) is/are on the boat; remove load(s) (carrier==None)
@@ -436,7 +457,7 @@ def boats_get_put_delete(bid):
     else:
         # Status code 405
         res = make_response()
-        res.headers.set('Allow', 'GET, DELETE')
+        res.headers.set('Allow', 'GET, DELETE, PATCH, PUT')
         res.headers.set('Content-Type', 'text/html')
         res.status_code = 405
         return res
@@ -479,7 +500,7 @@ def put_delete_loads_in_boat(bid, lid):
             err = {"Error": "The boat is owned by another user"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
-            res.status_code = 403
+            res.status_code = 401
             return res
 
         else:
@@ -524,7 +545,7 @@ def put_delete_loads_in_boat(bid, lid):
             err = {"Error": "The boat is owned by another user"}
             res = make_response(err)
             res.headers.set('Content-Type', 'application/json')
-            res.status_code = 403
+            res.status_code = 401
             return res
 
         else:
@@ -540,7 +561,7 @@ def put_delete_loads_in_boat(bid, lid):
     else:
         # Status code 405
         res = make_response()
-        res.headers.set('Allow', 'GET, DELETE')
+        res.headers.set('Allow', 'PUT, DELETE')
         res.headers.set('Content-Type', 'text/html')
         res.status_code = 405
         return res
@@ -548,46 +569,56 @@ def put_delete_loads_in_boat(bid, lid):
 
 @bp.route('/<bid>/loads', methods=['GET'])
 def get_reservations(bid):
-    # Checks if JWT was provided in Authorization header
-    sub = check_jwt(request.headers)
 
-    if not isinstance(sub, str):
-        return sub
+    if request.method == 'GET':
+        # Checks if JWT was provided in Authorization header
+        sub = check_jwt(request.headers)
 
-    boat_key = client.key(constants.boats, int(bid))
-    boat = client.get(key=boat_key)
-    load_list = {"self": request.root_url + "boats/" + bid, "loads": []}
+        if not isinstance(sub, str):
+            return sub
 
-    # Check if boat exists
-    if not boat:
-        err = {"Error": "No boat with this boat_id exists"}
-        res = make_response(err)
-        res.headers.set('Content-Type', 'application/json')
-        res.status_code = 404
-        return res
+        boat_key = client.key(constants.boats, int(bid))
+        boat = client.get(key=boat_key)
+        load_list = {"self": request.root_url + "boats/" + bid, "loads": []}
 
-    # Checks ownership of boat
-    elif boat["owner"] != sub:
-        err = {"Error": "The boat is owned by another user"}
-        res = make_response(err)
-        res.headers.set('Content-Type', 'application/json')
-        res.status_code = 403
-        return res
+        # Check if boat exists
+        if not boat:
+            err = {"Error": "No boat with this boat_id exists"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 404
+            return res
 
-    if boat['loads']:
-        for load in boat['loads']:
-            load_list['loads'].append(load)
+        # Checks ownership of boat
+        elif boat["owner"] != sub:
+            err = {"Error": "The boat is owned by another user"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 401
+            return res
 
+        if boat['loads']:
+            for load in boat['loads']:
+                load_list['loads'].append(load)
+
+                # Sends json response
+                res = make_response(json.dumps(load_list))
+                res.headers.set('Content-Type', 'application/json')
+                res.status_code = 200
+                return res
+
+        # Boat has no loads
+        else:
             # Sends json response
-            res = make_response(json.dumps(load_list))
+            res = make_response(json.dumps([]))
             res.headers.set('Content-Type', 'application/json')
             res.status_code = 200
             return res
 
-    # Boat has no loads
     else:
-        # Sends json response
-        res = make_response(json.dumps([]))
-        res.headers.set('Content-Type', 'application/json')
-        res.status_code = 200
+        # Status code 405
+        res = make_response()
+        res.headers.set('Allow', 'GET')
+        res.headers.set('Content-Type', 'text/html')
+        res.status_code = 405
         return res
