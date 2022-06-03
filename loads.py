@@ -98,6 +98,9 @@ def loads_get_post():
         # Get query of loads and set the limit and offset for the query
         query = client.query(kind=constants.loads)
         total_loads = list(query.fetch(query.keys_only()))
+
+        # Reset the query to show the objects
+        query = client.query(kind=constants.loads)
         q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
 
@@ -220,7 +223,7 @@ def loads_get_put_delete(lid):
 
         res = make_response(json.dumps(load))
         res.mimetype = 'application/json'
-        res.status_code = 201
+        res.status_code = 200
         return res
 
     elif request.method == 'DELETE':
@@ -348,7 +351,7 @@ def loads_get_put_delete(lid):
 
         res = make_response(json.dumps(load))
         res.mimetype = 'application/json'
-        res.status_code = 201
+        res.status_code = 200
         return res
 
     elif request.method == 'GET':

@@ -106,6 +106,8 @@ def boats_get_post():
                 res.status_code = 403
                 return res
 
+        # For future bug closure: Query list of users. If sub not in list of users, return a 401
+
         # Create new boat entity
         new_boat = datastore.entity.Entity(key=client.key(constants.boats))
         new_boat.update({"name": content["name"], "type": content["type"], "length": content["length"],
@@ -134,6 +136,10 @@ def boats_get_post():
         query = client.query(kind=constants.boats)
         query.add_filter("owner", "=", sub)
         total_boats = list(query.fetch(query.keys_only()))
+
+        # Reset the query to show the objects
+        query = client.query(kind=constants.boats)
+        query.add_filter("owner", "=", sub)
         q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
 
@@ -292,7 +298,7 @@ def boats_get_put_delete(bid):
 
         res = make_response(json.dumps(boat))
         res.mimetype = 'application/json'
-        res.status_code = 201
+        res.status_code = 200
         return res
 
     elif request.method == 'PUT':
@@ -391,7 +397,7 @@ def boats_get_put_delete(bid):
 
         res = make_response(json.dumps(boat))
         res.mimetype = 'application/json'
-        res.status_code = 201
+        res.status_code = 200
         return res
 
     elif request.method == 'DELETE':
@@ -570,6 +576,14 @@ def put_delete_loads_in_boat(bid, lid):
 @bp.route('/<bid>/loads', methods=['GET'])
 def get_reservations(bid):
 
+    if 'application/json' not in request.accept_mimetypes:
+            # Checks if client accepts json, if not return 406
+            err = {"Error": "The request header ‘Accept' is not application/json"}
+            res = make_response(err)
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 406
+            return res
+
     if request.method == 'GET':
         # Checks if JWT was provided in Authorization header
         sub = check_jwt(request.headers)
@@ -601,11 +615,11 @@ def get_reservations(bid):
             for load in boat['loads']:
                 load_list['loads'].append(load)
 
-                # Sends json response
-                res = make_response(json.dumps(load_list))
-                res.headers.set('Content-Type', 'application/json')
-                res.status_code = 200
-                return res
+            # Sends json response
+            res = make_response(json.dumps(load_list))
+            res.headers.set('Content-Type', 'application/json')
+            res.status_code = 200
+            return res
 
         # Boat has no loads
         else:
